@@ -1,13 +1,17 @@
+import { SprintBoard } from "@/components/sprint-board";
+
 export default function Home() {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-background px-6 text-center">
-      <h1 className="text-3xl font-semibold tracking-tight">
-        Vibed Lite Jira
-      </h1>
-      <p className="max-w-md text-muted-foreground">
-        Project scaffolding is ready. Start building boards, issues, and
-        projects here.
-      </p>
+    <div className="flex min-h-0 flex-1 flex-col bg-background">
+      <div className="shrink-0 border-b border-border px-4 py-4 lg:px-6">
+        <h1 className="text-lg font-semibold tracking-tight sm:text-xl">
+          Active Sprint
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Drag work items across lanes as their status changes.
+        </p>
+      </div>
+      <SprintBoard />
     </div>
   );
 }

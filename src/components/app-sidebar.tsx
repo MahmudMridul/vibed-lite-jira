@@ -21,7 +21,7 @@ import { useSidebar } from "@/components/sidebar-context";
 
 const NAV_ITEMS = [
   { href: "/", label: "Active Sprint", icon: LayoutDashboard },
-  { href: "/boards", label: "Backlogs", icon: KanbanSquare },
+  { href: "/backlogs", label: "Backlogs", icon: KanbanSquare },
   {
     href: "/settings",
     label: "Settings",
@@ -72,8 +72,7 @@ function NavExpandableItem({
         className={cn(
           "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
           "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-          isChildActive &&
-            "bg-sidebar-accent text-sidebar-accent-foreground",
+          isChildActive && "bg-sidebar-accent text-sidebar-accent-foreground",
           collapsed && "justify-center px-0",
         )}
       >
