@@ -43,14 +43,22 @@ Open [http://localhost:3000](http://localhost:3000).
 ```
 src/
   app/                  # App Router routes, layouts, pages
-  components/ui/        # shadcn/ui components
+  components/
+    ui/                  # shadcn/ui components
+    sprint-board.tsx      # Active Sprint kanban board (To Do / In Progress / Done lanes)
+    work-item-card.tsx    # Draggable work item card used on the sprint board
   lib/
+    mock-sprint-data.ts   # Mock work items powering the Active Sprint board (UI-only, not wired to Supabase yet)
     supabase/
       client.ts         # browser Supabase client
       server.ts         # server-side Supabase client (Server Components/Actions)
       proxy.ts           # session refresh logic used by src/proxy.ts
   proxy.ts               # Next.js 16 "Proxy" (formerly Middleware) — refreshes auth session on every request
 ```
+
+## Active Sprint board
+
+The home page (`/`) renders a Jira-style kanban board with three swimlanes — **To Do**, **In Progress**, **Done**. Work items are draggable between lanes to update their status. This is currently backed by mock data in `src/lib/mock-sprint-data.ts`; it is not yet wired to the `work_items`/`statuses`/`sprints` tables in `db.sql`.
 
 > **Note:** Next.js 16 renamed Middleware to Proxy. `src/proxy.ts` is the equivalent of what older Next.js docs/guides call `middleware.ts`.
 
