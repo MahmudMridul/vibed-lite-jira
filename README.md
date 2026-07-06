@@ -46,9 +46,11 @@ src/
   components/
     ui/                  # shadcn/ui components
     sprint-board.tsx      # Active Sprint kanban board (To Do / In Progress / Done lanes)
-    work-item-card.tsx    # Draggable work item card used on the sprint board
+    backlogs-board.tsx    # Backlogs view — one section per sprint plus an unassigned Backlog section
+    create-sprint-dialog.tsx # Dialog for creating a new empty sprint
+    work-item-card.tsx    # Draggable work item card used on the sprint board and backlogs view
   lib/
-    mock-sprint-data.ts   # Mock work items powering the Active Sprint board (UI-only, not wired to Supabase yet)
+    mock-sprint-data.ts   # Mock sprints/work items powering the Active Sprint and Backlogs views (UI-only, not wired to Supabase yet)
     supabase/
       client.ts         # browser Supabase client
       server.ts         # server-side Supabase client (Server Components/Actions)
@@ -61,6 +63,10 @@ src/
 The home page (`/`) renders a Jira-style kanban board with three swimlanes — **To Do**, **In Progress**, **Done**. Work items are draggable between lanes to update their status. This is currently backed by mock data in `src/lib/mock-sprint-data.ts`; it is not yet wired to the `work_items`/`statuses`/`sprints` tables in `db.sql`.
 
 > **Note:** Next.js 16 renamed Middleware to Proxy. `src/proxy.ts` is the equivalent of what older Next.js docs/guides call `middleware.ts`.
+
+## Backlogs
+
+The `/backlogs` page lists every sprint, each showing the work items assigned to it, plus a trailing **Backlog** section for unassigned work items. Work item cards are draggable between sprint sections to reassign them, and a **Create sprint** button opens a dialog to add a new empty sprint. Like the Active Sprint board, this is backed by mock data in `src/lib/mock-sprint-data.ts` and is not yet wired to Supabase.
 
 ## Supabase usage
 

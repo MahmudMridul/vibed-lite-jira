@@ -13,4 +13,5 @@ This version has breaking changes — APIs, conventions, and file structure may 
 1. After implementation is complete build the project to make sure everything works. Do no run the project.
 2. Update README after following actions or conditions: new feature implemented, old feature updated, bug fix, if current README is not updated with codebase.
 3. Make sure UI is responsive in all devices (mobile, tab, laptop, PC) and the UI should not break if browser zoom increases or decreases.
+4. Make the UI minimal but good looking. 
 <!-- END:general-coding-instructions -->

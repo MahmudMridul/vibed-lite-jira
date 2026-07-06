@@ -15,12 +15,37 @@ export type WorkItem = {
     initials: string;
   } | null;
   status: WorkItemStatus;
+  sprintId: string | null;
+};
+
+export type Sprint = {
+  id: string;
+  name: string;
+  startDate: string | null;
+  endDate: string | null;
 };
 
 export const STATUS_COLUMNS: { id: WorkItemStatus; label: string }[] = [
   { id: "todo", label: "To Do" },
   { id: "in_progress", label: "In Progress" },
   { id: "done", label: "Done" },
+];
+
+export const BACKLOG_SPRINT_ID = "backlog";
+
+export const MOCK_SPRINTS: Sprint[] = [
+  {
+    id: "sprint-1",
+    name: "Sprint 1",
+    startDate: "2026-06-22",
+    endDate: "2026-07-05",
+  },
+  {
+    id: "sprint-2",
+    name: "Sprint 2",
+    startDate: "2026-07-06",
+    endDate: "2026-07-19",
+  },
 ];
 
 export const MOCK_WORK_ITEMS: WorkItem[] = [
@@ -32,6 +57,7 @@ export const MOCK_WORK_ITEMS: WorkItem[] = [
     labels: ["backend"],
     assignee: { name: "Amara Chen", initials: "AC" },
     status: "todo",
+    sprintId: "sprint-1",
   },
   {
     id: "VLJ-2",
@@ -41,6 +67,7 @@ export const MOCK_WORK_ITEMS: WorkItem[] = [
     labels: ["design"],
     assignee: { name: "Diego Reyes", initials: "DR" },
     status: "todo",
+    sprintId: "sprint-1",
   },
   {
     id: "VLJ-3",
@@ -50,6 +77,7 @@ export const MOCK_WORK_ITEMS: WorkItem[] = [
     labels: ["frontend"],
     assignee: null,
     status: "todo",
+    sprintId: "sprint-1",
   },
   {
     id: "VLJ-4",
@@ -59,6 +87,7 @@ export const MOCK_WORK_ITEMS: WorkItem[] = [
     labels: ["frontend", "backlog"],
     assignee: { name: "Amara Chen", initials: "AC" },
     status: "in_progress",
+    sprintId: "sprint-1",
   },
   {
     id: "VLJ-5",
@@ -68,6 +97,7 @@ export const MOCK_WORK_ITEMS: WorkItem[] = [
     labels: ["settings"],
     assignee: { name: "Priya Nair", initials: "PN" },
     status: "in_progress",
+    sprintId: "sprint-2",
   },
   {
     id: "VLJ-6",
@@ -77,6 +107,7 @@ export const MOCK_WORK_ITEMS: WorkItem[] = [
     labels: ["bug", "backend"],
     assignee: { name: "Diego Reyes", initials: "DR" },
     status: "in_progress",
+    sprintId: "sprint-2",
   },
   {
     id: "VLJ-7",
@@ -86,6 +117,7 @@ export const MOCK_WORK_ITEMS: WorkItem[] = [
     labels: ["chore"],
     assignee: { name: "Priya Nair", initials: "PN" },
     status: "done",
+    sprintId: "sprint-2",
   },
   {
     id: "VLJ-8",
@@ -95,5 +127,6 @@ export const MOCK_WORK_ITEMS: WorkItem[] = [
     labels: ["design"],
     assignee: { name: "Amara Chen", initials: "AC" },
     status: "done",
+    sprintId: null,
   },
 ];
