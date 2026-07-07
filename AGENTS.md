@@ -10,8 +10,21 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # Coding Instructions
 
-1. After implementation is complete build the project to make sure everything works. Do no run the project.
-2. Update README after following actions or conditions: new feature implemented, old feature updated, bug fix, if current README is not updated with codebase.
+1. After implementation is complete build the project  to make sure everything works. Do no run the project.
+
+2. Update [README.md](README) and files inside [docs](docs) after following actions have been performed or following conditions are true: 
+
+    2.1 New feature implemented. 
+
+    2.2 Old feature updated. 
+
+    2.3 Bug fix. 
+
+    2.4 If current [README.md](README) or files inside [docs](docs) are not in sync with the codebase.
+
 3. Make sure UI is responsive in all devices (mobile, tab, laptop, PC) and the UI should not break if browser zoom increases or decreases.
+
 4. Make the UI minimal but good looking. 
+
+5. Handle errors and exception from both front end code and server code so that any error or exception doesn't crash the application. 
 <!-- END:general-coding-instructions -->
