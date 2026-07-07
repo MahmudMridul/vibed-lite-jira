@@ -14,10 +14,12 @@ import {
   ArrowUpDown,
   Tag,
   ListChecks,
+  LogOut,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/components/sidebar-context";
+import { signOut } from "@/lib/actions/auth";
 
 const NAV_ITEMS = [
   { href: "/", label: "Active Sprint", icon: LayoutDashboard },
@@ -199,6 +201,21 @@ function SidebarContent({ collapsed }: { collapsed: boolean }) {
           })}
         </ul>
       </nav>
+
+      <form action={signOut} className="shrink-0 border-t border-sidebar-border p-2">
+        <button
+          type="submit"
+          title={collapsed ? "Sign out" : undefined}
+          className={cn(
+            "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors",
+            "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+            collapsed && "justify-center px-0",
+          )}
+        >
+          <LogOut className="size-4.5 shrink-0" />
+          <span className={cn(collapsed && "hidden")}>Sign out</span>
+        </button>
+      </form>
     </div>
   );
 }

@@ -1,20 +1,18 @@
 "use client";
 
 import * as React from "react";
+import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
 import { WorkItemCard } from "@/components/work-item-card";
-import {
-  MOCK_WORK_ITEMS,
-  STATUS_COLUMNS,
-  type WorkItem,
-  type WorkItemStatus,
-} from "@/lib/mock-sprint-data";
+import { updateWorkItemStatus } from "@/lib/actions/board";
+import type { Priority, Status, WorkItem, WorkItemType } from "@/lib/types";
 
 function SprintColumn({
   status,
-  label,
   items,
+  types,
+  priorities,
   draggedItemId,
   isDropTarget,
   onDragStart,
@@ -23,9 +21,10 @@ function SprintColumn({
   onDragLeave,
   onDrop,
 }: {
-  status: WorkItemStatus;
-  label: string;
+  status: Status;
   items: WorkItem[];
+  types: WorkItemType[];
+  priorities: Priority[];
   draggedItemId: string | null;
   isDropTarget: boolean;
   onDragStart: (
@@ -35,10 +34,7 @@ function SprintColumn({
   onDragEnd: () => void;
   onDragOver: (event: React.DragEvent<HTMLDivElement>) => void;
   onDragLeave: () => void;
-  onDrop: (
-    event: React.DragEvent<HTMLDivElement>,
-    status: WorkItemStatus,
-  ) => void;
+  onDrop: (event: React.DragEvent<HTMLDivElement>, statusId: string) => void;
 }) {
   return (
     <div
@@ -48,11 +44,11 @@ function SprintColumn({
       )}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
-      onDrop={(event) => onDrop(event, status)}
+      onDrop={(event) => onDrop(event, status.id)}
     >
       <div className="flex shrink-0 items-center gap-2 px-3.5 py-3">
         <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-          {label}
+          {status.name}
         </h2>
         <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
           {items.length}
@@ -69,6 +65,10 @@ function SprintColumn({
           <WorkItemCard
             key={item.id}
             item={item}
+            type={types.find((type) => type.id === item.typeId)}
+            priority={priorities.find(
+              (priority) => priority.id === item.priorityId,
+            )}
             dragging={draggedItemId === item.id}
             onDragStart={(event) => onDragStart(event, item.id)}
             onDragEnd={onDragEnd}
@@ -85,13 +85,24 @@ function SprintColumn({
   );
 }
 
-export function SprintBoard() {
-  const [items, setItems] = React.useState<WorkItem[]>(MOCK_WORK_ITEMS);
+export function SprintBoard({
+  initialWorkItems,
+  statuses,
+  types,
+  priorities,
+}: {
+  initialWorkItems: WorkItem[];
+  statuses: Status[];
+  types: WorkItemType[];
+  priorities: Priority[];
+}) {
+  const [items, setItems] = React.useState<WorkItem[]>(initialWorkItems);
   const [draggedItemId, setDraggedItemId] = React.useState<string | null>(
     null,
   );
-  const [dropTargetStatus, setDropTargetStatus] =
-    React.useState<WorkItemStatus | null>(null);
+  const [dropTargetStatusId, setDropTargetStatusId] = React.useState<
+    string | null
+  >(null);
 
   const handleDragStart = (
     event: React.DragEvent<HTMLDivElement>,
@@ -104,50 +115,62 @@ export function SprintBoard() {
 
   const handleDragEnd = () => {
     setDraggedItemId(null);
-    setDropTargetStatus(null);
+    setDropTargetStatusId(null);
   };
 
   const handleDragOver = (
     event: React.DragEvent<HTMLDivElement>,
-    status: WorkItemStatus,
+    statusId: string,
   ) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
-    if (dropTargetStatus !== status) setDropTargetStatus(status);
+    if (dropTargetStatusId !== statusId) setDropTargetStatusId(statusId);
   };
 
   const handleDrop = (
     event: React.DragEvent<HTMLDivElement>,
-    status: WorkItemStatus,
+    statusId: string,
   ) => {
     event.preventDefault();
     const itemId = event.dataTransfer.getData("text/plain") || draggedItemId;
-    if (itemId) {
-      setItems((prev) =>
-        prev.map((item) =>
-          item.id === itemId ? { ...item, status } : item,
-        ),
-      );
-    }
     setDraggedItemId(null);
-    setDropTargetStatus(null);
+    setDropTargetStatusId(null);
+    if (!itemId) return;
+
+    const previousItems = items;
+    const item = items.find((existing) => existing.id === itemId);
+    if (!item || item.statusId === statusId) return;
+
+    setItems((prev) =>
+      prev.map((existing) =>
+        existing.id === itemId ? { ...existing, statusId } : existing,
+      ),
+    );
+
+    updateWorkItemStatus(itemId, statusId).then((result) => {
+      if (result.error) {
+        setItems(previousItems);
+        toast.error("Couldn't update status", { description: result.error });
+      }
+    });
   };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 md:flex-row md:overflow-x-auto lg:p-6">
-      {STATUS_COLUMNS.map((column) => (
+      {statuses.map((status) => (
         <SprintColumn
-          key={column.id}
-          status={column.id}
-          label={column.label}
-          items={items.filter((item) => item.status === column.id)}
+          key={status.id}
+          status={status}
+          items={items.filter((item) => item.statusId === status.id)}
+          types={types}
+          priorities={priorities}
           draggedItemId={draggedItemId}
-          isDropTarget={dropTargetStatus === column.id}
+          isDropTarget={dropTargetStatusId === status.id}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
-          onDragOver={(event) => handleDragOver(event, column.id)}
+          onDragOver={(event) => handleDragOver(event, status.id)}
           onDragLeave={() =>
-            setDropTargetStatus((prev) => (prev === column.id ? null : prev))
+            setDropTargetStatusId((prev) => (prev === status.id ? null : prev))
           }
           onDrop={handleDrop}
         />

@@ -5,23 +5,26 @@ import { Bug, BookText, SquareCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import type { WorkItem } from "@/lib/mock-sprint-data";
+import type { Priority, WorkItem, WorkItemType } from "@/lib/types";
 
-const TYPE_ICON: Record<WorkItem["type"], React.ElementType> = {
+const TYPE_ICON: Record<string, React.ElementType> = {
   task: SquareCheck,
   bug: Bug,
   story: BookText,
 };
 
-const TYPE_ICON_COLOR: Record<WorkItem["type"], string> = {
+const DEFAULT_TYPE_ICON = SquareCheck;
+
+const TYPE_ICON_COLOR: Record<string, string> = {
   task: "text-blue-500",
   bug: "text-red-500",
   story: "text-emerald-500",
 };
 
+const DEFAULT_TYPE_ICON_COLOR = "text-blue-500";
+
 const PRIORITY_VARIANT: Record<
-  WorkItem["priority"],
+  string,
   "secondary" | "outline" | "default" | "destructive"
 > = {
   low: "outline",
@@ -30,18 +33,29 @@ const PRIORITY_VARIANT: Record<
   urgent: "destructive",
 };
 
+const DEFAULT_PRIORITY_VARIANT = "secondary";
+
 export function WorkItemCard({
   item,
+  type,
+  priority,
   dragging,
   onDragStart,
   onDragEnd,
 }: {
   item: WorkItem;
+  type: WorkItemType | undefined;
+  priority: Priority | undefined;
   dragging: boolean;
   onDragStart: (event: React.DragEvent<HTMLDivElement>) => void;
   onDragEnd: () => void;
 }) {
-  const TypeIcon = TYPE_ICON[item.type];
+  const typeKey = type?.name.toLowerCase() ?? "";
+  const TypeIcon = TYPE_ICON[typeKey] ?? DEFAULT_TYPE_ICON;
+  const typeIconColor = TYPE_ICON_COLOR[typeKey] ?? DEFAULT_TYPE_ICON_COLOR;
+  const priorityVariant =
+    PRIORITY_VARIANT[priority?.name.toLowerCase() ?? ""] ??
+    DEFAULT_PRIORITY_VARIANT;
 
   return (
     <Card
@@ -71,28 +85,12 @@ export function WorkItemCard({
         </div>
       )}
 
-      <div className="flex items-center justify-between px-(--card-spacing)">
-        <div className="flex items-center gap-2">
-          <TypeIcon
-            className={cn("size-4 shrink-0", TYPE_ICON_COLOR[item.type])}
-          />
-          <span className="text-xs text-muted-foreground">{item.id}</span>
-          <Badge
-            variant={PRIORITY_VARIANT[item.priority]}
-            className="text-[10px] capitalize"
-          >
-            {item.priority}
+      <div className="flex items-center gap-2 px-(--card-spacing)">
+        <TypeIcon className={cn("size-4 shrink-0", typeIconColor)} />
+        {priority && (
+          <Badge variant={priorityVariant} className="text-[10px] capitalize">
+            {priority.name}
           </Badge>
-        </div>
-
-        {item.assignee ? (
-          <Avatar size="sm" title={item.assignee.name}>
-            <AvatarFallback>{item.assignee.initials}</AvatarFallback>
-          </Avatar>
-        ) : (
-          <Avatar size="sm" title="Unassigned">
-            <AvatarFallback>?</AvatarFallback>
-          </Avatar>
         )}
       </div>
     </Card>

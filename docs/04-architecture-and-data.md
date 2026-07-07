@@ -2,15 +2,20 @@
 
 ## Data model
 
-The intended schema (see [`db.sql`](../db.sql)) targets Postgres via
-Supabase. **Important:** the app does not currently query any of these
-tables for board data — this is the target schema for when persistence is
-wired up. See [08-known-issues.md](./08-known-issues.md).
+The schema lives in [`docs/db_schema.sql`](./db_schema.sql) (a live export
+from the Supabase project) and targets Postgres via Supabase. As of this
+writing, the app queries these tables directly: `src/lib/data/board.ts`
+reads sprints/work items/lookup tables for both pages, and
+`src/lib/actions/board.ts` writes status/sprint changes and new sprints.
+Row Level Security allows anonymous reads on all tables but requires an
+authenticated session for writes — see [05-workflows.md](./05-workflows.md)
+and the `/login` / `/signup` pages.
 
 ### Tables
 
 **Lookup tables** (dynamic — admins add/remove/update values; intended to
-back the not-yet-built `/settings/*` pages):
+back the not-yet-built `/settings/*` pages; seeded via
+[`docs/seed.sql`](./seed.sql)):
 
 | Table | Columns |
 |---|---|
@@ -23,8 +28,8 @@ back the not-yet-built `/settings/*` pages):
 
 | Table | Columns |
 |---|---|
-| `sprints` | `id` (uuid, pk), `name` (text), `start_date` (date), `end_date` (date), `created_at` (timestamptz, default now()), `current_sprint` (boolean, default false — **only in `db_schema.sql`, missing from `db.sql`**, marks the active sprint) |
-| `work_items` | `id` (uuid, pk), `title` (text), `description` (text), `deadline` (date), `status_id` → `statuses.id`, `type_id` → `types.id`, `priority_id` → `priorities.id`, `sprint_id` → `sprints.id`, `parent_id` → `work_items.id` (self-referential, `on delete cascade`, for subtasks), `created_at` (timestamptz), `deleted_at` (timestamptz, soft delete) |
+| `sprints` | `id` (uuid, pk), `name` (text), `start_date` (date), `end_date` (date), `created_at` (timestamptz, default now()), `current_sprint` (boolean, default false — marks the active sprint) |
+| `work_items` | `id` (uuid, pk), `title` (text), `description` (text), `deadline` (date), `status_id` → `statuses.id`, `type_id` → `types.id`, `priority_id` → `priorities.id`, `sprint_id` → `sprints.id`, `parent_id` → `work_items.id` (self-referential, `on delete cascade`, for subtasks), `created_at` (timestamptz), `deleted_at` (timestamptz, soft delete). **No assignee column** — the UI does not show an assignee. |
 
 **Join / relation tables:**
 
@@ -59,8 +64,7 @@ sprints ──< work_items >── statuses
 
 ## Request lifecycle
 
-Since there are no API routes or Server Actions yet, "request lifecycle"
-today mostly concerns page loads and auth:
+**Page load (read path):**
 
 ```
 1. Browser requests a page (e.g. GET /backlogs)
@@ -73,24 +77,40 @@ today mostly concerns page loads and auth:
       (["/", "/backlogs", "/login", "/signup", "/auth"]),
       redirects to /login
    d. Returns the response with refreshed auth cookies attached
-4. Next.js renders the matched page.tsx (Server Component by default)
-5. Client Components (e.g. SprintBoard, BacklogsBoard) hydrate and manage
-   their own state client-side via useState, seeded from mock data in
-   src/lib/mock-sprint-data.ts
-6. User interactions (drag-and-drop, create sprint) mutate local React
-   state only — nothing is sent back to the server or Supabase
+4. The matched page.tsx (a Server Component) calls getBoardData() in
+   src/lib/data/board.ts, which queries Supabase directly (sprints, work
+   items with joined labels, statuses, types, priorities) using the
+   request-scoped server client
+5. Client Components (SprintBoard, BacklogsBoard) hydrate with that data as
+   initial React state
 ```
 
-When persistence is added, the expected shape (not yet implemented) is:
-Client Component → Server Action or API route → Supabase client
-(`src/lib/supabase/server.ts`) → Postgres.
+**Mutation (write path — status change, sprint reassignment, create sprint):**
+
+```
+1. User drags a card or submits "Create sprint" in a Client Component
+2. The component optimistically updates local state, then calls a Server
+   Action from src/lib/actions/board.ts (updateWorkItemStatus,
+   updateWorkItemSprint, or createSprint)
+3. The Server Action runs on the server using the authenticated user's
+   Supabase session (src/lib/supabase/server.ts) and issues the
+   update/insert against Postgres
+4. Row Level Security requires an authenticated session for writes; if the
+   user isn't signed in, the mutation fails and the action returns an error
+5. On success, the action calls revalidatePath() for the affected route;
+   on failure, the client rolls back its optimistic update and shows a
+   toast (sonner)
+```
+
+Auth mutations (`signIn`, `signUp`, `signOut` in `src/lib/actions/auth.ts`)
+follow the same Server Action pattern, redirecting on success.
 
 ## External integrations / dependencies
 
 | Integration | Used for | Client |
 |---|---|---|
-| Supabase Auth | Session management, login redirects | `@supabase/ssr` in `src/proxy.ts` / `src/lib/supabase/proxy.ts` |
-| Supabase Postgres | Intended for all board/backlog data (schema exists, not yet queried by app code) | `src/lib/supabase/client.ts` (browser), `src/lib/supabase/server.ts` (server) |
+| Supabase Auth | Session management, login/signup/signout, login redirects | `@supabase/ssr` in `src/proxy.ts`, `src/lib/supabase/proxy.ts`, `src/lib/actions/auth.ts` |
+| Supabase Postgres | All board/backlog reads and writes | `src/lib/data/board.ts` (reads), `src/lib/actions/board.ts` (writes), via `src/lib/supabase/server.ts` |
 | Vercel | Hosting/deployment | N/A (CI/CD via git integration) |
 
 There are no other external APIs, queues, or storage services integrated.

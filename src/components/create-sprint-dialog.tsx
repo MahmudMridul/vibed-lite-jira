@@ -19,8 +19,10 @@ import { Label } from "@/components/ui/label";
 
 export function CreateSprintDialog({
   onCreate,
+  disabled = false,
 }: {
   onCreate: (name: string) => void;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
   const [name, setName] = React.useState("");
@@ -75,7 +77,7 @@ export function CreateSprintDialog({
             <DialogClose render={<Button type="button" variant="outline" />}>
               Cancel
             </DialogClose>
-            <Button type="submit" disabled={!name.trim()}>
+            <Button type="submit" disabled={!name.trim() || disabled}>
               Create
             </Button>
           </DialogFooter>
