@@ -89,3 +89,23 @@ The `/backlogs` page lists every sprint, each showing the work items assigned to
 | `npm run build`  | Production build         |
 | `npm run start`  | Start the production server |
 | `npm run lint`   | Run ESLint               |
+
+## Documentation
+
+Deeper onboarding and reference documentation lives in [`docs/`](./docs):
+
+1. [Project Overview](./docs/01-overview.md) — what this is, who it's for, architecture, tech stack
+2. [Getting Started](./docs/02-getting-started.md) — local setup in under 30 minutes
+3. [Codebase Map](./docs/03-codebase-map.md) — directory structure, where things live, conventions
+4. [Architecture & Data](./docs/04-architecture-and-data.md) — schema, entity relationships, request lifecycle
+5. [Workflows](./docs/05-workflows.md) — branching, commits, PRs, build/lint, deployment
+6. [Operational Knowledge](./docs/06-operational-knowledge.md) — environments, logging, gotchas
+7. [Decisions Log](./docs/07-decisions-log.md) — why key architectural choices were made
+8. [Known Issues](./docs/08-known-issues.md) — gaps, drift, and dead links to be aware of
+9. [Glossary](./docs/09-glossary.md) — domain terms and jargon
+
+> **Most important thing to know up front**: the UI (Active Sprint board and
+> Backlogs view) currently runs entirely on mock data — nothing is
+> persisted to the Supabase database yet. See
+> [Known Issues](./docs/08-known-issues.md) before assuming any feature
+> works end-to-end.
