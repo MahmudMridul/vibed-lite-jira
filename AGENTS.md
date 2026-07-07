@@ -27,4 +27,6 @@ This version has breaking changes — APIs, conventions, and file structure may 
 4. Make the UI minimal but good looking. 
 
 5. Handle errors and exception from both front end code and server code so that any error or exception doesn't crash the application. 
+
+6. Before you start to make any changes to the codebase, go through files inside [docs](docs) folder first to get idea about the current state. 
 <!-- END:general-coding-instructions -->
