@@ -35,57 +35,64 @@ an ORM would mean maintaining a second schema representation (migrations)
 in addition to the SQL files.
 
 **Trade-off / open risk**: Without an ORM's migration tooling, schema
-changes are tracked manually in `db.sql` / `db_schema.sql`, which have
-already drifted from each other (see ADR-3). If the project grows, revisit
-whether a migration tool (e.g. Supabase CLI migrations, or an ORM) is worth
-the overhead.
+changes must be tracked manually against [`docs/db_schema.sql`](./db_schema.sql)
+(the live schema export). If the project grows, revisit whether a migration
+tool (e.g. Supabase CLI migrations, or an ORM) is worth the overhead.
 
 ---
 
-### ADR-3: Two schema files exist (`db.sql` and `db_schema.sql`) — how to treat them
+### ADR-3 (resolved): `db.sql` vs `db_schema.sql` schema drift
 
-**Situation**: `db.sql` is a hand-authored schema with explanatory comments
-(the design intent). `db_schema.sql` appears to be a raw export/dump from
-the actual Supabase project (uses `TABLESPACE pg_default`, explicit
-constraint names). They have drifted:
+**Original situation**: two schema files existed — a hand-authored `db.sql`
+and a Supabase export `db_schema.sql` — and had drifted (missing
+`current_sprint` column, missing `work_items` table in the dump, duplicated
+`work_item_links` block).
 
-- `db_schema.sql`'s `sprints` table has a `current_sprint boolean` column
-  not present in `db.sql`.
-- `db_schema.sql` is missing the `work_items` table definition entirely
-  (likely omitted when the dump was assembled/pasted).
-- `db_schema.sql` has `work_item_links` defined twice (duplicate block).
-
-**Decision (recommended going forward)**: Treat `db.sql` as the source of
-truth for *intent* and update it whenever the live schema changes (e.g. add
-`current_sprint` to `db.sql`). Treat `db_schema.sql` as a disposable,
-regenerable export — don't hand-edit it; regenerate it from Supabase when
-needed, or remove it in favor of proper Supabase CLI migrations.
-
-**Why this matters**: Anyone provisioning a new environment from `db.sql`
-alone would miss the `current_sprint` column that the running app/dashboard
-may already depend on. This should be reconciled before onboarding a second
-environment (e.g. staging).
+**Resolution**: `db.sql` was deleted and `db_schema.sql` was moved to
+[`docs/db_schema.sql`](./db_schema.sql), which is now the single source of
+truth for the schema (confirmed against the live Supabase project via
+PostgREST introspection when wiring up persistence). Treat it as a
+disposable, regenerable export — don't hand-edit it, regenerate it from
+Supabase when the schema changes, or move to Supabase CLI-managed
+migrations if schema changes become frequent.
 
 ---
 
-### ADR-4: UI built against mock data before wiring up persistence
+### ADR-4 (superseded): UI was built against mock data before wiring up persistence
 
-**Decision**: Build the Active Sprint board and Backlogs UI (including
-drag-and-drop) entirely against an in-memory mock dataset
-(`src/lib/mock-sprint-data.ts`) before connecting either page to Supabase.
+**Original decision**: build the Active Sprint board and Backlogs UI
+against an in-memory mock dataset (`src/lib/mock-sprint-data.ts`) before
+connecting either page to Supabase, to iterate on UI/UX independent of data
+fetching.
 
-**Why**: Allows UI/UX (kanban interactions, layout, responsiveness) to be
-iterated on quickly without also solving data-fetching, mutations, and
-optimistic UI at the same time. Matches the commit history: schema was
-added (`feat: add db schema`) but the boards that followed
-(`feat: implement swimlanes with drag feature`, `feat: create backlogs UI`)
-still use mock data.
+**Current state**: persistence has since been wired up — `mock-sprint-data.ts`
+has been deleted. Both pages are Server Components that fetch live data via
+`src/lib/data/board.ts`; mutations go through Server Actions in
+`src/lib/actions/board.ts`. See [04-architecture-and-data.md](./04-architecture-and-data.md).
+Along the way, the mock data's `assignee` field was dropped rather than
+carried into the DB-backed model, since the schema has no assignee concept
+(see ADR-6).
 
-**How to apply**: When wiring up persistence, the mock data's shape
-(`WorkItem`, `Sprint` types in `mock-sprint-data.ts`) is the de facto
-contract the UI expects — align Supabase queries/Server Actions to return
-data in that shape (or adapt it at the boundary) rather than reshaping all
-the UI components at once.
+---
+
+### ADR-6: Dropped assignee instead of inventing schema for it
+
+**Decision**: When wiring the UI to Supabase, remove the assignee
+avatar/field from `WorkItemCard` rather than add an `assignee_id` column or
+a `users`/`profiles` table.
+
+**Why**: The live schema has no assignee concept anywhere (no column, no
+users/profiles table), and Supabase's `auth.users` table isn't meant to be
+queried directly from the client for this purpose. Inventing a schema for
+assignees (a table, RLS policies, a UI for picking a user) is a separate
+feature decision, not something to improvise while wiring up existing
+boards to the database.
+
+**How to apply**: If assignee support is added later, it needs its own
+design pass — likely a `profiles` table keyed to `auth.users(id)` (populated
+via a trigger on signup) plus an `assignee_id` FK on `work_items`, RLS
+policies for reading profiles, and UI for assignment. See
+[08-known-issues.md](./08-known-issues.md).
 
 ---
 
@@ -106,3 +113,25 @@ sprint reassignment).
 mobile/touch limitations (no built-in touch support, harder keyboard
 navigation) compared to dedicated libraries. If mobile drag support or
 reordering *within* a column becomes a requirement, revisit this decision.
+
+---
+
+### ADR-7: Built minimal `/login` and `/signup` pages as part of wiring up persistence
+
+**Decision**: When connecting the boards to Supabase, also build basic
+email/password `/login` and `/signup` pages (`src/app/login`,
+`src/app/signup`, backed by `src/lib/actions/auth.ts`), rather than leaving
+writes unauthenticated-only or stubbed out.
+
+**Why**: Row Level Security on all board tables allows anonymous reads but
+requires an authenticated session for writes (insert/update). Without a way
+to sign in, drag-and-drop and "Create sprint" would always fail once wired
+to the real database — persistence would be read-only in practice. A
+minimal auth flow was the smallest change that makes the existing write
+paths actually work end-to-end.
+
+**How to apply**: This is intentionally minimal — email/password only, no
+password reset, no OAuth providers (all disabled in Supabase Auth settings
+at the time), and email confirmation is required before a new account can
+sign in (see [08-known-issues.md](./08-known-issues.md)). Treat `/login` and
+`/signup` as a starting point, not a complete auth UX.

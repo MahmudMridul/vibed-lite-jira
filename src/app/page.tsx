@@ -1,6 +1,9 @@
 import { SprintBoard } from "@/components/sprint-board";
+import { getBoardData } from "@/lib/data/board";
 
-export default function Home() {
+export default async function Home() {
+  const { workItems, statuses, types, priorities } = await getBoardData();
+
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background">
       <div className="shrink-0 border-b border-border px-4 py-4 lg:px-6">
@@ -11,7 +14,12 @@ export default function Home() {
           Drag work items across lanes as their status changes.
         </p>
       </div>
-      <SprintBoard />
+      <SprintBoard
+        initialWorkItems={workItems}
+        statuses={statuses}
+        types={types}
+        priorities={priorities}
+      />
     </div>
   );
 }

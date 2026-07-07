@@ -8,12 +8,16 @@ work items across sprints. It is aimed at small teams that want the core
 Jira workflow (statuses, sprints, priorities, work item types, labels)
 without the overhead of full Jira.
 
-**Current state**: the UI (board + backlogs + drag-and-drop) is fully built
-but runs on **in-memory mock data** (`src/lib/mock-sprint-data.ts`). Nothing
-is persisted to the database yet — dragging a card or creating a sprint only
-updates local React state and is lost on refresh. Supabase is wired up for
-**auth only** at this point. See [08-known-issues.md](./08-known-issues.md)
-for the full list of gaps.
+**Current state**: the UI (board + backlogs + drag-and-drop) is wired up to
+Supabase Postgres. Both pages fetch live data on the server
+(`src/lib/data/board.ts`), and drag-and-drop / "Create sprint" call Server
+Actions (`src/lib/actions/board.ts`) that write to the database, with
+optimistic UI updates that roll back on error. Row Level Security requires
+an authenticated session for writes, so minimal `/login` and `/signup`
+pages exist as well. There is still no UI for creating/editing work items
+or managing lookup tables (statuses/types/priorities/labels) — those are
+managed directly via SQL for now. See
+[08-known-issues.md](./08-known-issues.md) for the full list of gaps.
 
 ## Who uses it
 
@@ -36,31 +40,35 @@ basic work item metadata (type, priority, labels).
 │  Next.js App Router pages (React 19, TSX)     │
 │  - "/"          Active Sprint board           │
 │  - "/backlogs"  Backlogs view                 │
-│  Drag & drop via native HTML5 DnD API         │
+│  - "/login", "/signup"                        │
+│  Drag & drop via native HTML5 DnD API,        │
+│  optimistic updates + Server Action calls     │
 └───────────────┬───────────────────────────────┘
-                │  (Supabase JS client - auth only today)
+                │  (Server Actions: src/lib/actions/*)
                 ▼
 ┌─────────────────────────────────────────────┐
 │           Next.js Server (Vercel)             │
 │  - src/proxy.ts (Middleware/"Proxy" in Next 16)│
 │    refreshes Supabase session cookie on every  │
 │    request, redirects unauthenticated users    │
-│  - Server Components can use                  │
-│    src/lib/supabase/server.ts                  │
+│  - Server Components read via                 │
+│    src/lib/data/board.ts                       │
+│  - Server Actions write via                   │
+│    src/lib/actions/board.ts, actions/auth.ts   │
+│    (src/lib/supabase/server.ts)                │
 └───────────────┬───────────────────────────────┘
                 │
                 ▼
 ┌─────────────────────────────────────────────┐
 │                 Supabase                      │
-│  - Postgres (schema in db.sql / db_schema.sql)│
-│  - Auth (used today, cookie-based sessions)   │
-│  - Board/backlog data (schema exists, NOT yet │
-│    read/written by the app)                   │
+│  - Postgres (schema in docs/db_schema.sql)    │
+│  - Auth (cookie-based sessions)               │
+│  - RLS: anonymous read, authenticated write   │
 └─────────────────────────────────────────────┘
 ```
 
-There are no API routes or Server Actions in the app yet — all board
-interactivity is client-side `useState` against mock data.
+There are no traditional API routes (`route.ts`) in the app — reads happen
+directly in Server Components and writes go through Server Actions.
 
 ## Tech stack and rationale
 

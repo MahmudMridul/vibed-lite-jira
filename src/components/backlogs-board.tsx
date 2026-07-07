@@ -1,17 +1,19 @@
 "use client";
 
 import * as React from "react";
+import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
 import { WorkItemCard } from "@/components/work-item-card";
 import { CreateSprintDialog } from "@/components/create-sprint-dialog";
+import { createSprint, updateWorkItemSprint } from "@/lib/actions/board";
 import {
   BACKLOG_SPRINT_ID,
-  MOCK_SPRINTS,
-  MOCK_WORK_ITEMS,
+  type Priority,
   type Sprint,
   type WorkItem,
-} from "@/lib/mock-sprint-data";
+  type WorkItemType,
+} from "@/lib/types";
 
 function formatDateRange(startDate: string | null, endDate: string | null) {
   if (!startDate || !endDate) return null;
@@ -28,6 +30,8 @@ function SprintSection({
   title,
   dateRange,
   items,
+  types,
+  priorities,
   draggedItemId,
   isDropTarget,
   onDragStart,
@@ -40,6 +44,8 @@ function SprintSection({
   title: string;
   dateRange: string | null;
   items: WorkItem[];
+  types: WorkItemType[];
+  priorities: Priority[];
   draggedItemId: string | null;
   isDropTarget: boolean;
   onDragStart: (
@@ -78,6 +84,10 @@ function SprintSection({
           <WorkItemCard
             key={item.id}
             item={item}
+            type={types.find((type) => type.id === item.typeId)}
+            priority={priorities.find(
+              (priority) => priority.id === item.priorityId,
+            )}
             dragging={draggedItemId === item.id}
             onDragStart={(event) => onDragStart(event, item.id)}
             onDragEnd={onDragEnd}
@@ -94,19 +104,36 @@ function SprintSection({
   );
 }
 
-export function BacklogsBoard() {
-  const [sprints, setSprints] = React.useState<Sprint[]>(MOCK_SPRINTS);
-  const [items, setItems] = React.useState<WorkItem[]>(MOCK_WORK_ITEMS);
+export function BacklogsBoard({
+  initialSprints,
+  initialWorkItems,
+  types,
+  priorities,
+}: {
+  initialSprints: Sprint[];
+  initialWorkItems: WorkItem[];
+  types: WorkItemType[];
+  priorities: Priority[];
+}) {
+  const [sprints, setSprints] = React.useState<Sprint[]>(initialSprints);
+  const [items, setItems] = React.useState<WorkItem[]>(initialWorkItems);
   const [draggedItemId, setDraggedItemId] = React.useState<string | null>(
     null,
   );
   const [dropTargetSprintId, setDropTargetSprintId] = React.useState<
     string | null
   >(null);
+  const [isCreatingSprint, setIsCreatingSprint] = React.useState(false);
 
-  const handleCreateSprint = (name: string) => {
-    const id = `sprint-${Date.now()}`;
-    setSprints((prev) => [...prev, { id, name, startDate: null, endDate: null }]);
+  const handleCreateSprint = async (name: string) => {
+    setIsCreatingSprint(true);
+    const result = await createSprint(name);
+    setIsCreatingSprint(false);
+    if (result.error || !result.sprint) {
+      toast.error("Couldn't create sprint", { description: result.error });
+      return;
+    }
+    setSprints((prev) => [...prev, result.sprint]);
   };
 
   const handleDragStart = (
@@ -138,26 +165,40 @@ export function BacklogsBoard() {
   ) => {
     event.preventDefault();
     const itemId = event.dataTransfer.getData("text/plain") || draggedItemId;
-    if (itemId) {
-      setItems((prev) =>
-        prev.map((item) =>
-          item.id === itemId
-            ? {
-                ...item,
-                sprintId: sprintId === BACKLOG_SPRINT_ID ? null : sprintId,
-              }
-            : item,
-        ),
-      );
-    }
     setDraggedItemId(null);
     setDropTargetSprintId(null);
+    if (!itemId) return;
+
+    const nextSprintId = sprintId === BACKLOG_SPRINT_ID ? null : sprintId;
+    const previousItems = items;
+    const item = items.find((existing) => existing.id === itemId);
+    if (!item || item.sprintId === nextSprintId) return;
+
+    setItems((prev) =>
+      prev.map((existing) =>
+        existing.id === itemId
+          ? { ...existing, sprintId: nextSprintId }
+          : existing,
+      ),
+    );
+
+    updateWorkItemSprint(itemId, nextSprintId).then((result) => {
+      if (result.error) {
+        setItems(previousItems);
+        toast.error("Couldn't move work item", {
+          description: result.error,
+        });
+      }
+    });
   };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 lg:p-6">
       <div className="flex shrink-0 justify-end">
-        <CreateSprintDialog onCreate={handleCreateSprint} />
+        <CreateSprintDialog
+          onCreate={handleCreateSprint}
+          disabled={isCreatingSprint}
+        />
       </div>
 
       {sprints.map((sprint) => (
@@ -167,6 +208,8 @@ export function BacklogsBoard() {
           title={sprint.name}
           dateRange={formatDateRange(sprint.startDate, sprint.endDate)}
           items={items.filter((item) => item.sprintId === sprint.id)}
+          types={types}
+          priorities={priorities}
           draggedItemId={draggedItemId}
           isDropTarget={dropTargetSprintId === sprint.id}
           onDragStart={handleDragStart}
@@ -184,6 +227,8 @@ export function BacklogsBoard() {
         title="Backlog"
         dateRange={null}
         items={items.filter((item) => item.sprintId === null)}
+        types={types}
+        priorities={priorities}
         draggedItemId={draggedItemId}
         isDropTarget={dropTargetSprintId === BACKLOG_SPRINT_ID}
         onDragStart={handleDragStart}
